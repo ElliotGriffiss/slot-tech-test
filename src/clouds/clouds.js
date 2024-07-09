@@ -33,6 +33,6 @@ export class Clouds extends Base {
         Tween.fromTo(this._cloud3, 80000, {x: -400}, {x: 1080, repeat: -1, delay: 40});
         Tween.fromTo(this._cloud4, 80000, {x: -400}, {x: 1080, repeat: -1, delay: 60});
 
-        this._native.addChild(this._cloud1, this._cloud2, this._cloud3);
+        this._native.addChild(this._cloud1, this._cloud2, this._cloud3, this._cloud4);
     }
 }
