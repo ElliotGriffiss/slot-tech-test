@@ -1900,7 +1900,7 @@
 
   var slicy = function slicy(arrLike, offset) {
       var arr = [];
-      for (var i = offset || 0, j = 0; i < arrLike.length; i += 1, j += 1) {
+      for (var i = offset , j = 0; i < arrLike.length; i += 1, j += 1) {
           arr[j] = arrLike[i];
       }
       return arr;
@@ -2796,7 +2796,10 @@
       if (typeof window !== 'undefined' && obj === window) {
           return '{ [object Window] }';
       }
-      if (obj === commonjsGlobal) {
+      if (
+          (typeof globalThis !== 'undefined' && obj === globalThis)
+          || (typeof commonjsGlobal !== 'undefined' && obj === commonjsGlobal)
+      ) {
           return '{ [object globalThis] }';
       }
       if (!isDate(obj) && !isRegExp$1(obj)) {
@@ -3347,6 +3350,10 @@
       }
   };
 
+  var limit = 1024;
+
+  /* eslint operator-linebreak: [2, "before"] */
+
   var encode = function encode(str, defaultEncoder, charset, kind, format) {
       // This code was originally written by Brian White (mscdex) for the io.js core querystring library.
       // It has been adapted here for stricter adherence to RFC 3986
@@ -3368,45 +3375,54 @@
       }
 
       var out = '';
-      for (var i = 0; i < string.length; ++i) {
-          var c = string.charCodeAt(i);
+      for (var j = 0; j < string.length; j += limit) {
+          var segment = string.length >= limit ? string.slice(j, j + limit) : string;
+          var arr = [];
 
-          if (
-              c === 0x2D // -
-              || c === 0x2E // .
-              || c === 0x5F // _
-              || c === 0x7E // ~
-              || (c >= 0x30 && c <= 0x39) // 0-9
-              || (c >= 0x41 && c <= 0x5A) // a-z
-              || (c >= 0x61 && c <= 0x7A) // A-Z
-              || (format === formats$3.RFC1738 && (c === 0x28 || c === 0x29)) // ( )
-          ) {
-              out += string.charAt(i);
-              continue;
+          for (var i = 0; i < segment.length; ++i) {
+              var c = segment.charCodeAt(i);
+              if (
+                  c === 0x2D // -
+                  || c === 0x2E // .
+                  || c === 0x5F // _
+                  || c === 0x7E // ~
+                  || (c >= 0x30 && c <= 0x39) // 0-9
+                  || (c >= 0x41 && c <= 0x5A) // a-z
+                  || (c >= 0x61 && c <= 0x7A) // A-Z
+                  || (format === formats$3.RFC1738 && (c === 0x28 || c === 0x29)) // ( )
+              ) {
+                  arr[arr.length] = segment.charAt(i);
+                  continue;
+              }
+
+              if (c < 0x80) {
+                  arr[arr.length] = hexTable[c];
+                  continue;
+              }
+
+              if (c < 0x800) {
+                  arr[arr.length] = hexTable[0xC0 | (c >> 6)]
+                      + hexTable[0x80 | (c & 0x3F)];
+                  continue;
+              }
+
+              if (c < 0xD800 || c >= 0xE000) {
+                  arr[arr.length] = hexTable[0xE0 | (c >> 12)]
+                      + hexTable[0x80 | ((c >> 6) & 0x3F)]
+                      + hexTable[0x80 | (c & 0x3F)];
+                  continue;
+              }
+
+              i += 1;
+              c = 0x10000 + (((c & 0x3FF) << 10) | (segment.charCodeAt(i) & 0x3FF));
+
+              arr[arr.length] = hexTable[0xF0 | (c >> 18)]
+                  + hexTable[0x80 | ((c >> 12) & 0x3F)]
+                  + hexTable[0x80 | ((c >> 6) & 0x3F)]
+                  + hexTable[0x80 | (c & 0x3F)];
           }
 
-          if (c < 0x80) {
-              out = out + hexTable[c];
-              continue;
-          }
-
-          if (c < 0x800) {
-              out = out + (hexTable[0xC0 | (c >> 6)] + hexTable[0x80 | (c & 0x3F)]);
-              continue;
-          }
-
-          if (c < 0xD800 || c >= 0xE000) {
-              out = out + (hexTable[0xE0 | (c >> 12)] + hexTable[0x80 | ((c >> 6) & 0x3F)] + hexTable[0x80 | (c & 0x3F)]);
-              continue;
-          }
-
-          i += 1;
-          c = 0x10000 + (((c & 0x3FF) << 10) | (string.charCodeAt(i) & 0x3FF));
-          /* eslint operator-linebreak: [2, "before"] */
-          out += hexTable[0xF0 | (c >> 18)]
-              + hexTable[0x80 | ((c >> 12) & 0x3F)]
-              + hexTable[0x80 | ((c >> 6) & 0x3F)]
-              + hexTable[0x80 | (c & 0x3F)];
+          out += arr.join('');
       }
 
       return out;
@@ -3840,7 +3856,7 @@
       charset: 'utf-8',
       charsetSentinel: false,
       comma: false,
-      decodeDotInKeys: true,
+      decodeDotInKeys: false,
       decoder: utils.decode,
       delimiter: '&',
       depth: 5,
@@ -3881,6 +3897,7 @@
       var obj = { __proto__: null };
 
       var cleanStr = options.ignoreQueryPrefix ? str.replace(/^\?/, '') : str;
+      cleanStr = cleanStr.replace(/%5B/gi, '[').replace(/%5D/gi, ']');
       var limit = options.parameterLimit === Infinity ? undefined : options.parameterLimit;
       var parts = cleanStr.split(options.delimiter, limit);
       var skipIndex = -1; // Keep track of where the utf8 sentinel was found
@@ -4967,7 +4984,6 @@ Deprecated since v${version}`), console.warn(stack))), warnings[message] = !0;
                 continue;
               }
             }
-            allowAboveRoot && (res.length > 0 ? res += "/.." : res = "..", lastSegmentLength = 2);
           } else
             res.length > 0 ? res += `/${path2.slice(lastSlash + 1, i)}` : res = path2.slice(lastSlash + 1, i), lastSegmentLength = i - lastSlash - 1;
         lastSlash = i, dots = 0;
@@ -5054,7 +5070,7 @@ Deprecated since v${version}`), console.warn(stack))), warnings[message] = !0;
       const isAbsolute = path2.startsWith("/");
       this.hasProtocol(path2) && (protocol = this.rootname(path2), path2 = path2.slice(protocol.length));
       const trailingSeparator = path2.endsWith("/");
-      return path2 = normalizeStringPosix(path2, !1), path2.length > 0 && trailingSeparator && (path2 += "/"), isAbsolute ? `/${path2}` : protocol + path2;
+      return path2 = normalizeStringPosix(path2), path2.length > 0 && trailingSeparator && (path2 += "/"), isAbsolute ? `/${path2}` : protocol + path2;
     },
     /**
      * Determines if path is an absolute path.
@@ -12180,7 +12196,7 @@ void main(void)
      */
     run(options) {
       const { renderer } = this;
-      renderer.runners.init.emit(renderer.options), options.hello && console.log(`PixiJS 7.4.0 - ${renderer.rendererLogId} - https://pixijs.com`), renderer.resize(renderer.screen.width, renderer.screen.height);
+      renderer.runners.init.emit(renderer.options), options.hello && console.log(`PixiJS 7.4.2 - ${renderer.rendererLogId} - https://pixijs.com`), renderer.resize(renderer.screen.width, renderer.screen.height);
     }
     destroy() {
     }
@@ -14710,7 +14726,7 @@ void main(void)
     }
   }
 
-  const VERSION = "7.4.0";
+  const VERSION = "7.4.2";
 
   class Bounds {
     constructor() {
@@ -19752,9 +19768,9 @@ ${e}`);
 })();
 `;
   let WORKER_URL$1 = null;
-  let WorkerInstance$1 = class WorkerInstance extends Worker {
+  let WorkerInstance$1 = class WorkerInstance {
     constructor() {
-      WORKER_URL$1 || (WORKER_URL$1 = URL.createObjectURL(new Blob([WORKER_CODE$1], { type: "application/javascript" }))), super(WORKER_URL$1);
+      WORKER_URL$1 || (WORKER_URL$1 = URL.createObjectURL(new Blob([WORKER_CODE$1], { type: "application/javascript" }))), this.worker = new Worker(WORKER_URL$1);
     }
   };
   WorkerInstance$1.revokeObjectURL = function() {
@@ -19789,9 +19805,9 @@ ${e}`);
 })();
 `;
   let WORKER_URL = null;
-  class WorkerInstance extends Worker {
+  class WorkerInstance {
     constructor() {
-      WORKER_URL || (WORKER_URL = URL.createObjectURL(new Blob([WORKER_CODE], { type: "application/javascript" }))), super(WORKER_URL);
+      WORKER_URL || (WORKER_URL = URL.createObjectURL(new Blob([WORKER_CODE], { type: "application/javascript" }))), this.worker = new Worker(WORKER_URL);
     }
   }
   WorkerInstance.revokeObjectURL = function() {
@@ -19805,7 +19821,7 @@ ${e}`);
     }
     isImageBitmapSupported() {
       return this._isImageBitmapSupported !== void 0 ? this._isImageBitmapSupported : (this._isImageBitmapSupported = new Promise((resolve) => {
-        const worker = new WorkerInstance$1();
+        const { worker } = new WorkerInstance$1();
         worker.addEventListener("message", (event) => {
           worker.terminate(), WorkerInstance$1.revokeObjectURL(), resolve(event.data);
         });
@@ -19820,7 +19836,7 @@ ${e}`);
     getWorker() {
       MAX_WORKERS === void 0 && (MAX_WORKERS = navigator.hardwareConcurrency || 4);
       let worker = this.workerPool.pop();
-      return !worker && this._createdWorkers < MAX_WORKERS && (this._createdWorkers++, worker = new WorkerInstance(), worker.addEventListener("message", (event) => {
+      return !worker && this._createdWorkers < MAX_WORKERS && (this._createdWorkers++, worker = new WorkerInstance().worker, worker.addEventListener("message", (event) => {
         this.complete(event.data), this.returnWorker(event.target), this.next();
       })), worker;
     }
@@ -20371,7 +20387,7 @@ Please use Assets.add({ alias, src, data, format, loadParser }) instead.`), asse
     }
     buildResolvedAsset(formattedAsset, data) {
       const { aliases, data: assetData, loadParser, format } = data;
-      return (this._basePath || this._rootPath) && (formattedAsset.src = path.toAbsolute(formattedAsset.src, this._basePath, this._rootPath)), formattedAsset.alias = aliases ?? formattedAsset.alias ?? [formattedAsset.src], formattedAsset.src = this._appendDefaultSearchParams(formattedAsset.src), formattedAsset.data = { ...assetData || {}, ...formattedAsset.data }, formattedAsset.loadParser = loadParser ?? formattedAsset.loadParser, formattedAsset.format = format ?? path.extname(formattedAsset.src).slice(1), formattedAsset.srcs = formattedAsset.src, formattedAsset.name = formattedAsset.alias, formattedAsset;
+      return (this._basePath || this._rootPath) && (formattedAsset.src = path.toAbsolute(formattedAsset.src, this._basePath, this._rootPath)), formattedAsset.alias = aliases ?? formattedAsset.alias ?? [formattedAsset.src], formattedAsset.src = this._appendDefaultSearchParams(formattedAsset.src), formattedAsset.data = { ...assetData || {}, ...formattedAsset.data }, formattedAsset.loadParser = loadParser ?? formattedAsset.loadParser, formattedAsset.format = format ?? formattedAsset.format ?? path.extname(formattedAsset.src).slice(1), formattedAsset.srcs = formattedAsset.src, formattedAsset.name = formattedAsset.alias, formattedAsset;
     }
   }
 
@@ -20872,15 +20888,15 @@ Please use Assets.add({ alias, src, data, format, loadParser }) instead.`), asse
   let storedGl, extensions;
   function getCompressedTextureExtensions() {
     extensions = {
+      bptc: storedGl.getExtension("EXT_texture_compression_bptc"),
+      astc: storedGl.getExtension("WEBGL_compressed_texture_astc"),
+      etc: storedGl.getExtension("WEBGL_compressed_texture_etc"),
       s3tc: storedGl.getExtension("WEBGL_compressed_texture_s3tc"),
       s3tc_sRGB: storedGl.getExtension("WEBGL_compressed_texture_s3tc_srgb"),
       /* eslint-disable-line camelcase */
-      etc: storedGl.getExtension("WEBGL_compressed_texture_etc"),
-      etc1: storedGl.getExtension("WEBGL_compressed_texture_etc1"),
       pvrtc: storedGl.getExtension("WEBGL_compressed_texture_pvrtc") || storedGl.getExtension("WEBKIT_WEBGL_compressed_texture_pvrtc"),
-      atc: storedGl.getExtension("WEBGL_compressed_texture_atc"),
-      astc: storedGl.getExtension("WEBGL_compressed_texture_astc"),
-      bptc: storedGl.getExtension("EXT_texture_compression_bptc")
+      etc1: storedGl.getExtension("WEBGL_compressed_texture_etc1"),
+      atc: storedGl.getExtension("WEBGL_compressed_texture_atc")
     };
   }
   const detectCompressedTextures = {
@@ -21345,29 +21361,20 @@ Please use Assets.add({ alias, src, data, format, loadParser }) instead.`), asse
   };
   extensions$1.add(loadKTX);
 
-  const resolveCompressedTextureUrl = {
+  const knownFormats = ["s3tc", "s3tc_sRGB", "etc", "etc1", "pvrtc", "atc", "astc", "bptc"], resolveCompressedTextureUrl = {
     extension: ExtensionType.ResolveParser,
     test: (value) => {
       const extension = path.extname(value).slice(1);
       return ["basis", "ktx", "dds"].includes(extension);
     },
     parse: (value) => {
-      const extension = path.extname(value).slice(1);
-      if (extension === "ktx") {
-        const extensions2 = [
-          ".s3tc.ktx",
-          ".s3tc_sRGB.ktx",
-          ".etc.ktx",
-          ".etc1.ktx",
-          ".pvrt.ktx",
-          ".atc.ktx",
-          ".astc.ktx",
-          ".bptc.ktx"
-        ];
-        if (extensions2.some((ext) => value.endsWith(ext)))
+      const parts = value.split("."), extension = parts.pop();
+      if (["ktx", "dds"].includes(extension)) {
+        const textureFormat = parts.pop();
+        if (knownFormats.includes(textureFormat))
           return {
             resolution: parseFloat(settings.RETINA_PREFIX.exec(value)?.[1] ?? "1"),
-            format: extensions2.find((ext) => value.endsWith(ext)),
+            format: textureFormat,
             src: value
           };
       }
@@ -26013,7 +26020,21 @@ void main(void)
   _Spritesheet.BATCH_SIZE = 1e3;
   let Spritesheet = _Spritesheet;
 
-  const validImages = ["jpg", "png", "jpeg", "avif", "webp"];
+  const validImages = [
+    "jpg",
+    "png",
+    "jpeg",
+    "avif",
+    "webp",
+    "s3tc",
+    "s3tc_sRGB",
+    "etc",
+    "etc1",
+    "pvrtc",
+    "atc",
+    "astc",
+    "bptc"
+  ];
   function getCacheableAssets(keys, asset, ignoreMultiPack) {
     const out = {};
     if (keys.forEach((key) => {
@@ -36757,28 +36778,74 @@ void main(void)\r
   class Button extends Base {
       /**
        * 
-       * @param {string} image - image name or alias from assets already loaded
+       * @param {string} active - image name or alias from assets already loaded
        * @param {function} onClick - call back function when clicked
        */
-      constructor(image, onClick) {
+      constructor(active, pressed, inactive, onClick) {
           super();
-          this._create(image, onClick);
+          this._create(active, pressed, inactive, onClick);
       }
 
       /**
        * create the button object
        * 
-       * @param {string} image - image name or alias from assets already loaded
+       * @param {string} active - image name or alias from assets already loaded for the active sprite
+       * @param {string} pressed - image name or alias from assets already loaded for the pressed sprite
+       * @param {string} inactive - image name or alias from assets already loaded for the inactive sprite
        * @param {function} onClick - call back function when clicked
        * @private
        */
-      _create(image, onClick) {
-          this._native = Sprite.from(image);
+      _create(active, pressed, inactive, onClick) {
+          this._native = new Container();
           this._native.eventMode = 'static';
           this._native.cursor = 'pointer';
-          this._native.addListener('pointerdown', () =>{
-              onClick();
-          });
+          this._buttonPayload = onClick;
+
+          this._activeSprite = Sprite.from(active);
+          this._pressedSprite = Sprite.from(pressed);
+          this._inactiveSprite = Sprite.from(inactive);
+
+          this._pressedSprite.visible = false;
+          this._inactiveSprite.visible = false;
+
+          this._native.addChild(this._activeSprite, this._pressedSprite, this._inactiveSprite);
+
+          this._native.on("pointerup", this._onButtonReleased, this);
+          this._native.on("pointerdown", this._onButtonPressed, this);
+          this._native.on("pointerout", this._cancel, this);
+
+          this._isActive = true;
+      }
+
+      set isActive(active) {
+          this._isActive = active;
+
+          this._activeSprite.visible = active;
+          this._inactiveSprite.visible = !active;
+
+          (this._isActive) ? this.cursor = 'Pointer' : this.cursor = 'default';
+      }
+
+       _onButtonReleased() {
+          if (this._isActive) {
+              this._activeSprite.visible = true;
+              this._pressedSprite.visible = false;
+              this._buttonPayload();
+          }
+      }
+
+       _onButtonPressed() {
+          if (this._isActive) {
+              this._activeSprite.visible = false;
+              this._pressedSprite.visible = true;
+          }
+      }
+
+       _cancel() {
+          if (this._isActive) {
+              this._activeSprite.visible = true;
+              this._pressedSprite.visible = false;
+          }
       }
 
   }
@@ -36887,10 +36954,12 @@ void main(void)\r
           this._reelManager = new ReelManager(3, 3, 125, 105);
           renderer.addChild(this._reelManager.native);
 
-          const button = new Button("playActive", async() => {
-              this._reelManager.startSpin();            
+          const button = new Button("playActive", "playCall", "playNonactive", async() => {
+              button.isActive = false;
+              this._reelManager.startSpin();
               await timerManager.startTimer(2000);
-              this._reelManager.stopSpin();    
+              await this._reelManager.stopSpin();
+              button.isActive = true;
           });
           button.x = 475;
           button.y = 440;
