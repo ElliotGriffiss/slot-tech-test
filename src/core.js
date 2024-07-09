@@ -1,10 +1,14 @@
+import * as PIXI from "pixi.js";
 import { renderer } from "./renderer.js";
 import { assetLoader } from "./assetLoader.js";
-import * as PIXI from "pixi.js";
+
 import { symbolStore } from "./reels/symbolStore.js";
 import { ReelManager } from "./reels/reelsManager.js";
 import { timerManager } from "./utils/timermanager.js";
+
 import { Button } from "./button.js";
+import { Clouds }  from "./clouds/clouds";
+
 
 /**
  * Base entry point for the game
@@ -79,6 +83,9 @@ class Core {
 
         const background = PIXI.Sprite.from("background");
         renderer.addChild(background);
+
+        const clouds = new Clouds();
+        renderer.addChild(clouds.native);
 
         symbolStore.createSymbols([
             {id: 0, name: "h2"},
@@ -168,7 +175,7 @@ class Core {
                symbol.play();
             });
 
-            await new Promise(resolve => setTimeout(resolve, 750));
+            await new Promise(resolve => setTimeout(resolve, 700));
         }
 
         this._spinButton.isActive = true;
