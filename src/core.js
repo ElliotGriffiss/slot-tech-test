@@ -162,22 +162,14 @@ class Core {
             }
         });
 
-        console.log(wins);
+        for (let i = 0; i < wins.length; i++) {
+            wins[i].map((value, index) => {
+               const symbol = this._reelManager.getSymbolAtPosition(index, value);
+               symbol.play();
+            });
 
-        wins.map(async (win) => {
-            const symbols = [];
-
-            for (let i = 0; i < win.length; i++) {
-                symbols.push(this._reelManager.getSymbolAtPosition(i, win[i]));
-            }
-
-            console.log(symbols);
-
-            await Promise.all(symbols.map((symbol) => {
-                console.log("play");
-                return symbol.play();
-            }));
-        });
+            await new Promise(resolve => setTimeout(resolve, 750));
+        }
 
         this._spinButton.isActive = true;
     }
