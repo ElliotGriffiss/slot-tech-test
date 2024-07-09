@@ -4,7 +4,7 @@ import { Base } from "../base.js";
 import { timerManager } from "../utils/timermanager.js";
 
 /**
- * Reel manager controls multipler reels 
+ * Reel manager controls multiple reels
  * 
  * @class
  */
@@ -100,5 +100,31 @@ export class ReelManager extends Base {
             this._native.addChild(reel.native);
             this._reels.push(reel);
         }
+    }
+
+    /**
+     * Gets all the visible symbols and returns them as a 2D array.
+     *
+     * @returns {Array.<number[]>} all the visible symbols as a 2D array.
+     */
+    getAllVisibleSymbolIDs() {
+        const symbolArray= [];
+
+        this._reels.forEach((reel, index)=> {
+            symbolArray[index] = reel.getAllVisibleSymbolIDs();
+        });
+
+        return symbolArray;
+    }
+
+    /**
+     * Returns the symbol at the given reel position.
+     *
+     * @param {number} reelIndex - the reel to get the symbol from.
+     * @param {number} rowIndex - the row to get the symbol from.
+     * @returns {symbol} the symbol we want.
+     */
+    getSymbolAtPosition(reelIndex, rowIndex) {
+        return this._reels[reelIndex].getSymbol(rowIndex);
     }
 }

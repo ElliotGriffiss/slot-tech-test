@@ -108,7 +108,7 @@ export class Reel extends Base {
 
     /**
      * Update called each frame
-     * 
+     *
      * @async
      * @private 
      */
@@ -131,5 +131,24 @@ export class Reel extends Base {
                 this.stop();
             }
         }
+    }
+
+    /**
+     * Gets the IDs of the visible symbols.
+     *
+     @returns {number[Array]} the visible symbols on this reel.
+     */
+    getAllVisibleSymbolIDs() {
+        return this._symbols.slice(1, 4).map((symbol)=> { return symbol.id});
+    }
+
+    /**
+     * Returns the symbol at the given row index.
+     *
+     * @param {number} rowIndex - the row to get the symbol from.
+     * @returns {symbol} the symbol we want.
+     */
+    getSymbol(rowIndex) {
+        return this._symbols.slice(1, 4)[rowIndex];
     }
 }

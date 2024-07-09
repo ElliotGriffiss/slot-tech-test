@@ -12,8 +12,10 @@ import { Button } from "./button.js";
  * @class
  */
 class Core {
-    constructor() {        
-        this._create();
+    constructor() {
+        this._symbolIDs = [0,1,2,3,4,5,6,7,8];
+
+        void this._create();
     }
 
     /**
@@ -138,6 +140,45 @@ class Core {
         this._reelManager.startSpin();
         await timerManager.startTimer(2000);
         await this._reelManager.stopSpin();
+
+        // Get the indexes of all the symbols as a 2D array.
+        let finalSymbols = this._reelManager.getAllVisibleSymbolIDs();
+        const wins = [];
+
+        // Foreach possible symbolID.
+        this._symbolIDs.forEach((id)=> {
+            const potentialWin = [];
+
+            for (let i = 0; i < finalSymbols.length; i++) {
+                const index = finalSymbols[i].indexOf(id);
+
+                if (index > -1) {
+                    potentialWin.push(index);
+                }
+            }
+
+            if (potentialWin.length > 2) {
+                wins.push(potentialWin);
+            }
+        });
+
+        console.log(wins);
+
+        wins.map(async (win) => {
+            const symbols = [];
+
+            for (let i = 0; i < win.length; i++) {
+                symbols.push(this._reelManager.getSymbolAtPosition(i, win[i]));
+            }
+
+            console.log(symbols);
+
+            await Promise.all(symbols.map((symbol) => {
+                console.log("play");
+                return symbol.play();
+            }));
+        });
+
         this._spinButton.isActive = true;
     }
 }

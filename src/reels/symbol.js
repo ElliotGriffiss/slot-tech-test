@@ -32,10 +32,12 @@ export class Symbol extends Base {
      * Play the symbol animation
      * 
      * @param {boolean} [loop=false] - loop the animation
+     * @async
      */
-    play(loop=false) {        
+    async play(loop=false) {
         this._native.loop = loop;
-        this._native.play();
+        this._native.gotoAndStop(0);
+        await this._native.play();
     }
     
     /**
