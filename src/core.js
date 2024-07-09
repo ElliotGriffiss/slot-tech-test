@@ -110,10 +110,12 @@ class Core {
         this._reelManager = new ReelManager(3, 3, 125, 105);
         renderer.addChild(this._reelManager.native);
 
-        const button = new Button("playActive", async() => {
-            this._reelManager.startSpin();            
+        const button = new Button("playActive", "playCall", "playNonactive", async() => {
+            button.isActive = false;
+            this._reelManager.startSpin();
             await timerManager.startTimer(2000);
-            this._reelManager.stopSpin();    
+            await this._reelManager.stopSpin();
+            button.isActive = true;
         });
         button.x = 475;
         button.y = 440;
