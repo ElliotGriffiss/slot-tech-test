@@ -110,17 +110,35 @@ class Core {
         this._reelManager = new ReelManager(3, 3, 125, 105);
         renderer.addChild(this._reelManager.native);
 
-        const button = new Button("playActive", "playCall", "playNonactive", async() => {
-            button.isActive = false;
-            this._reelManager.startSpin();
-            await timerManager.startTimer(2000);
-            await this._reelManager.stopSpin();
-            button.isActive = true;
+        this._spinButton = new Button("playActive", "playCall", "playNonactive", () => {
+            this._onSpinButtonPressed();
         });
-        button.x = 475;
-        button.y = 440;
-        renderer.addChild(button.native);
+        this._spinButton.x = 475;
+        this._spinButton.y = 440;
+        renderer.addChild(this._spinButton.native);
+    }
 
+    /**
+     * Handles Spin Button Pressed Logic.
+     *
+     * @private
+     */
+     _onSpinButtonPressed() {
+        void this._playGame();
+    }
+
+    /**
+     * Runs through the game.
+     *
+     * @private
+     * @async
+     */
+    async _playGame() {
+        this._spinButton.isActive = false;
+        this._reelManager.startSpin();
+        await timerManager.startTimer(2000);
+        await this._reelManager.stopSpin();
+        this._spinButton.isActive = true;
     }
 }
 
