@@ -7,7 +7,8 @@ import { ReelManager } from "./reels/reelsManager.js";
 import { timerManager } from "./utils/timermanager.js";
 
 import { Button } from "./button.js";
-import { Clouds }  from "./clouds/clouds";
+import { Clouds } from "./clouds/clouds";
+import { Credit } from "./credit/credit";
 
 
 /**
@@ -17,7 +18,9 @@ import { Clouds }  from "./clouds/clouds";
  */
 class Core {
     constructor() {
-        this._symbolIDs = [0,1,2,3,4,5,6,7,8];
+        this._credit = 25;
+        this._symbolIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        this._winValues = [30, 25, 20, 15, 10, 5, 2, 1, 0.5];
 
         void this._create();
     }
@@ -125,6 +128,10 @@ class Core {
         this._spinButton.x = 475;
         this._spinButton.y = 440;
         renderer.addChild(this._spinButton.native);
+
+        this._creditPanel = new Credit();
+        this._creditPanel.setCredit(this._credit);
+        renderer.addChild(this._creditPanel.native);
     }
 
     /**
@@ -133,7 +140,11 @@ class Core {
      * @private
      */
      _onSpinButtonPressed() {
-        void this._playGame();
+         if (this._credit >= 1 ) {
+             this._credit -= 1;
+             this._creditPanel.setCredit(this._credit);
+            void this._playGame();
+         }
     }
 
     /**
@@ -169,16 +180,29 @@ class Core {
             }
         });
 
+        // iterate over the wins and play the symbol animations.
         for (let i = 0; i < wins.length; i++) {
+            let winningSymbolID = 0;
+
             wins[i].map((value, index) => {
                const symbol = this._reelManager.getSymbolAtPosition(index, value);
                symbol.play();
+
+                winningSymbolID = symbol.id;
             });
 
+            const winIndex = this._symbolIDs.indexOf(winningSymbolID);
+            this._credit += this._winValues[winIndex];
+            this._creditPanel.setCredit(this._credit);
+
+            // wait for the animations to play before playing the next set, if there are multiple wins.
             await new Promise(resolve => setTimeout(resolve, 700));
         }
 
-        this._spinButton.isActive = true;
+        // assuming stake is 1.
+        if (this._credit >= 1) {
+            this._spinButton.isActive = true;
+        }
     }
 }
 
