@@ -8,7 +8,7 @@ import { timerManager } from "./utils/timermanager.js";
 
 import { Button } from "./button.js";
 import { Clouds } from "./clouds/clouds";
-import { Credit } from "./credit/credit";
+import { TextDisplayPanel } from "./TextDisplayPanel/textDisplayPanel";
 
 
 /**
@@ -129,9 +129,17 @@ class Core {
         this._spinButton.y = 440;
         renderer.addChild(this._spinButton.native);
 
-        this._creditPanel = new Credit();
-        this._creditPanel.setCredit(this._credit);
+        this._creditPanel = new TextDisplayPanel("Credit");
+        this._creditPanel.setText(this._credit);
+        this._creditPanel.x = 620;
+        this._creditPanel.y = 490;
         renderer.addChild(this._creditPanel.native);
+
+        this._winningsPanel = new TextDisplayPanel("Winnings");
+        this._winningsPanel.setText(0);
+        this._winningsPanel.x = 407;
+        this._winningsPanel.y = 490;
+        renderer.addChild(this._winningsPanel.native);
     }
 
     /**
@@ -142,7 +150,7 @@ class Core {
      _onSpinButtonPressed() {
          if (this._credit >= 1 ) {
              this._credit -= 1;
-             this._creditPanel.setCredit(this._credit);
+             this._creditPanel.setText(this._credit);
             void this._playGame();
          }
     }
@@ -155,6 +163,7 @@ class Core {
      */
     async _playGame() {
         this._spinButton.isActive = false;
+        this._winningsPanel.setText(0);
         this._reelManager.startSpin();
         await timerManager.startTimer(2000);
         await this._reelManager.stopSpin();
@@ -180,6 +189,8 @@ class Core {
             }
         });
 
+        let winTotal = 0;
+
         // iterate over the wins and play the symbol animations.
         for (let i = 0; i < wins.length; i++) {
             let winningSymbolID = 0;
@@ -192,12 +203,15 @@ class Core {
             });
 
             const winIndex = this._symbolIDs.indexOf(winningSymbolID);
-            this._credit += this._winValues[winIndex];
-            this._creditPanel.setCredit(this._credit);
+            winTotal += this._winValues[winIndex];
+            this._winningsPanel.setText(winTotal);
 
             // wait for the animations to play before playing the next set, if there are multiple wins.
             await timerManager.startTimer(700 );
         }
+
+        this._credit += winTotal;
+        this._creditPanel.setText(this._credit);
 
         // assuming stake is 1.
         if (this._credit >= 1) {
