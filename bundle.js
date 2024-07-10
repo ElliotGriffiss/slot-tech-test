@@ -36270,9 +36270,11 @@ void main(void)\r
        * Play the symbol animation
        * 
        * @param {boolean} [loop=false] - loop the animation
+       * @async
        */
-      play(loop=false) {        
+       play(loop=false) {
           this._native.loop = loop;
+          this._native.gotoAndStop(0);
           this._native.play();
       }
       
@@ -36550,7 +36552,7 @@ void main(void)\r
 
       /**
        * Update called each frame
-       * 
+       *
        * @async
        * @private 
        */
@@ -36573,6 +36575,25 @@ void main(void)\r
                   this.stop();
               }
           }
+      }
+
+      /**
+       * Gets the IDs of the visible symbols.
+       *
+       @returns {number[Array]} the visible symbols on this reel.
+       */
+      getAllVisibleSymbolIDs() {
+          return this._symbols.slice(1, 4).map((symbol)=> { return symbol.id});
+      }
+
+      /**
+       * Returns the symbol at the given row index.
+       *
+       * @param {number} rowIndex - the row to get the symbol from.
+       * @returns {symbol} the symbol we want.
+       */
+      getSymbol(rowIndex) {
+          return this._symbols.slice(1, 4)[rowIndex];
       }
   }
 
@@ -36671,7 +36692,7 @@ void main(void)\r
   const timerManager = new TimerManager();
 
   /**
-   * Reel manager controls multipler reels 
+   * Reel manager controls multiple reels
    * 
    * @class
    */
@@ -36768,6 +36789,32 @@ void main(void)\r
               this._reels.push(reel);
           }
       }
+
+      /**
+       * Gets all the visible symbols and returns them as a 2D array.
+       *
+       * @returns {Array.<number[]>} all the visible symbols as a 2D array.
+       */
+      getAllVisibleSymbolIDs() {
+          const symbolArray= [];
+
+          this._reels.forEach((reel, index)=> {
+              symbolArray[index] = reel.getAllVisibleSymbolIDs();
+          });
+
+          return symbolArray;
+      }
+
+      /**
+       * Returns the symbol at the given reel position.
+       *
+       * @param {number} reelIndex - the reel to get the symbol from.
+       * @param {number} rowIndex - the row to get the symbol from.
+       * @returns {symbol} the symbol we want.
+       */
+      getSymbolAtPosition(reelIndex, rowIndex) {
+          return this._reels[reelIndex].getSymbol(rowIndex);
+      }
   }
 
   /**
@@ -36817,6 +36864,11 @@ void main(void)\r
           this._isActive = true;
       }
 
+      /**
+       * Sets the buttons active state.
+       *
+       * @param {boolean} active - the buttons active state.
+       */
       set isActive(active) {
           this._isActive = active;
 
@@ -36826,6 +36878,9 @@ void main(void)\r
           (this._isActive) ? this.cursor = 'Pointer' : this.cursor = 'default';
       }
 
+      /**
+       * Handle on button released event.
+       */
        _onButtonReleased() {
           if (this._isActive) {
               this._activeSprite.visible = true;
@@ -36834,6 +36889,9 @@ void main(void)\r
           }
       }
 
+      /**
+       * Handle on button pressed event.
+       */
        _onButtonPressed() {
           if (this._isActive) {
               this._activeSprite.visible = false;
@@ -36841,6 +36899,9 @@ void main(void)\r
           }
       }
 
+      /**
+       * Cancels the current button press.
+       */
        _cancel() {
           if (this._isActive) {
               this._activeSprite.visible = true;
@@ -36851,13 +36912,110 @@ void main(void)\r
   }
 
   /**
+   * Clouds
+   *
+   * @class
+   * @extends Base
+   */
+  class Clouds extends Base {
+      constructor() {
+          super();
+
+          this._create();
+      }
+
+      /**
+       * creates the clouds and animates them.
+       *
+       * @private
+       */
+      _create() {
+          this._native = new Container();
+
+          this._cloud1 = Sprite.from("cloud1");
+          this._cloud2 = Sprite.from("cloud2");
+          this._cloud3 = Sprite.from("cloud1");
+          this._cloud4 = Sprite.from("cloud2");
+
+          Tween.fromTo(this._cloud1, 80000, {x: -400}, {x: 1080, repeat: -1});
+          Tween.fromTo(this._cloud2, 80000, {x: -400}, {x: 1080, repeat: -1, delay: 20});
+          Tween.fromTo(this._cloud3, 80000, {x: -400}, {x: 1080, repeat: -1, delay: 40});
+          Tween.fromTo(this._cloud4, 80000, {x: -400}, {x: 1080, repeat: -1, delay: 60});
+
+          this._native.addChild(this._cloud1, this._cloud2, this._cloud3, this._cloud4);
+      }
+  }
+
+  /**
+   * Credit
+   *
+   * @class
+   * @extends Base
+   */
+  class TextDisplayPanel extends Base {
+      /**
+       *
+       * @param {string} titleText - the title text for this panel.
+       */
+      constructor(titleText) {
+          super();
+
+          this._create(titleText);
+      }
+
+      /**
+       * creates the TextDisplayPanel panel.
+       *
+       * @param {string} titleText - the title text for this panel.
+       * @private
+       */
+      _create(titleText) {
+          this._native = new Container();
+
+          const panelBackground = Sprite.from("redPanel");
+          panelBackground.anchor.set(0.5);
+
+          const panelTitleText = new Text(titleText, {
+              fill: "#ffffff",
+              fontSize: 21,
+              fontWeight: "bold",
+              strokeThickness: 3
+          });
+          panelTitleText.anchor.set(0.5);
+          panelTitleText.y = -30;
+
+          this._text = new Text("£10", {
+              fill: "#ffffff",
+              fontSize: 21
+          });
+          this._text.anchor.set(0.5);
+          this._text.y = -3;
+
+          this._native.addChild(panelBackground, panelTitleText, this._text);
+      }
+
+      /**
+       * Sets the TextDisplayPanel text.
+       *
+       * @param {number} value - The updated value we want to set.
+       */
+      setText(value) {
+          this._text.text = "£"+ value.toFixed(2);
+      }
+  }
+
+  /**
    * Base entry point for the game
    * 
    * @class
    */
   class Core {
-      constructor() {        
-          this._create();
+      constructor() {
+          this._credit = 25;
+          this._symbolIDs = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+          this._winValues = [30, 25, 20, 15, 10, 5, 2, 1, 0.5];
+
+          void this._create();
       }
 
       /**
@@ -36922,6 +37080,9 @@ void main(void)\r
           const background = Sprite.from("background");
           renderer.addChild(background);
 
+          const clouds = new Clouds();
+          renderer.addChild(clouds.native);
+
           symbolStore.createSymbols([
               {id: 0, name: "h2"},
               {id: 1, name: "h3"},
@@ -36954,17 +37115,101 @@ void main(void)\r
           this._reelManager = new ReelManager(3, 3, 125, 105);
           renderer.addChild(this._reelManager.native);
 
-          const button = new Button("playActive", "playCall", "playNonactive", async() => {
-              button.isActive = false;
-              this._reelManager.startSpin();
-              await timerManager.startTimer(2000);
-              await this._reelManager.stopSpin();
-              button.isActive = true;
+          this._spinButton = new Button("playActive", "playCall", "playNonactive", () => {
+              this._onSpinButtonPressed();
           });
-          button.x = 475;
-          button.y = 440;
-          renderer.addChild(button.native);
+          this._spinButton.x = 475;
+          this._spinButton.y = 440;
+          renderer.addChild(this._spinButton.native);
 
+          this._creditPanel = new TextDisplayPanel("Credit");
+          this._creditPanel.setText(this._credit);
+          this._creditPanel.x = 620;
+          this._creditPanel.y = 490;
+          renderer.addChild(this._creditPanel.native);
+
+          this._winningsPanel = new TextDisplayPanel("Winnings");
+          this._winningsPanel.setText(0);
+          this._winningsPanel.x = 407;
+          this._winningsPanel.y = 490;
+          renderer.addChild(this._winningsPanel.native);
+      }
+
+      /**
+       * Handles Spin Button Pressed Logic.
+       *
+       * @private
+       */
+       _onSpinButtonPressed() {
+           if (this._credit >= 1 ) {
+               this._credit -= 1;
+               this._creditPanel.setText(this._credit);
+              void this._playGame();
+           }
+      }
+
+      /**
+       * Runs through the game.
+       *
+       * @private
+       * @async
+       */
+      async _playGame() {
+          this._spinButton.isActive = false;
+          this._winningsPanel.setText(0);
+          this._reelManager.startSpin();
+          await timerManager.startTimer(2000);
+          await this._reelManager.stopSpin();
+
+          // Get the indexes of all the symbols as a 2D array.
+          let finalSymbols = this._reelManager.getAllVisibleSymbolIDs();
+          const wins = [];
+
+          // Foreach possible symbolID.
+          this._symbolIDs.forEach((id)=> {
+              const potentialWin = [];
+
+              for (let i = 0; i < finalSymbols.length; i++) {
+                  const index = finalSymbols[i].indexOf(id);
+
+                  if (index > -1) {
+                      potentialWin.push(index);
+                  }
+              }
+
+              if (potentialWin.length > 2) {
+                  wins.push(potentialWin);
+              }
+          });
+
+          let winTotal = 0;
+
+          // iterate over the wins and play the symbol animations.
+          for (let i = 0; i < wins.length; i++) {
+              let winningSymbolID = 0;
+
+              wins[i].map((value, index) => {
+                 const symbol = this._reelManager.getSymbolAtPosition(index, value);
+                 symbol.play();
+
+                  winningSymbolID = symbol.id;
+              });
+
+              const winIndex = this._symbolIDs.indexOf(winningSymbolID);
+              winTotal += this._winValues[winIndex];
+              this._winningsPanel.setText(winTotal);
+
+              // wait for the animations to play before playing the next set, if there are multiple wins.
+              await timerManager.startTimer(700 );
+          }
+
+          this._credit += winTotal;
+          this._creditPanel.setText(this._credit);
+
+          // assuming stake is 1.
+          if (this._credit >= 1) {
+              this._spinButton.isActive = true;
+          }
       }
   }
 
