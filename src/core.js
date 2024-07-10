@@ -196,7 +196,7 @@ class Core {
             this._creditPanel.setCredit(this._credit);
 
             // wait for the animations to play before playing the next set, if there are multiple wins.
-            await new Promise(resolve => setTimeout(resolve, 700));
+            await timerManager.startTimer(700 );
         }
 
         // assuming stake is 1.
